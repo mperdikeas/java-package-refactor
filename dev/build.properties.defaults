@@ -1,0 +1,85 @@
+### software name & version
+software.name=package-refactor
+software.version=1.0
+
+### compiler flags & options
+javac.source=1.7
+javac.target=1.7
+javac.compiler=modern
+
+javac.nowarn=false
+javac.debug=true
+javac.deprec=true
+
+### archiver flags & options
+jar.compress=true
+jar.index=true
+jar.update=false
+
+### junit flags & options
+junit.summary=true
+junit.output=true
+junit.fork=true
+junit.maxmemory=2300m
+junit.halt=false
+
+
+### javadoc flags & options
+javadoc.packages=*
+javadoc.access=protected
+javadoc.fail=true
+
+### checkstyle flags & options
+checkstyle.config=${basedir}/setup/checks.xml
+checkstyle.fail=false
+checkstyle.style=${basedir}/setup/checkstyle.xsl
+
+### java sources
+java.dir=${basedir}/src
+
+### java test sources
+test.dir=${basedir}/test
+java.test.dir=${test.dir}/src
+
+### build & dist directories
+build.dir=${basedir}/build
+build.classes.dir=${build.dir}/classes
+build.javadoc.dir=${build.dir}/javadoc
+build.testclass.dir=${build.dir}/testclass
+build.jureport.dir=${build.dir}/jureport
+build.csreport.dir=${build.dir}/csreport
+
+dist.dir=${basedir}/dist
+dist.jar.file=${dist.dir}/${software.name}-v${software.version}.jar
+dist.sources-jar.file=${dist.dir}/${software.name}-v${software.version}-sources.jar
+
+### application third-party libs
+#lib.whatever.jar=lib/whatever-vX.x.jar
+
+### Ant dependencies third-party libs
+ant.deps.dir=${basedir}/tools
+lib.junit.jar=${ant.deps.dir}/junit.jar
+lib.hamcrest.jar=${ant.deps.dir}/hamcrest-core.jar
+lib.checkstyle.jar=${ant.deps.dir}/checkstyle-all.jar
+
+### findbugs
+findbugs.home=${ant.deps.dir}/findbugs
+findbugs.output=html
+findbugs.outputDir=${build.dir}/findbugs
+findbugs.effort=max
+findbugs.reportLevel=low
+
+### PMD
+pmd.libs.dir=${ant.deps.dir}/pmd
+pmd.failonerror=true
+pmd.failonruleviolation=false
+# the list of rulesets is              found in the 5.2.2 documentation here: pmd-doc-5.2.2/pmd-java/rules/index.html
+# the canonical names for rulesets are found in the 5.2.2 sources       here: pmd-src-5.2.2/pmd-java/src/main/resources/rulesets/java
+#pmd.rulesetfiles=java-basic, java-braces, java-clone, java-codesize, java-design, java-finalizers, java-imports, java-optimizations, java-strictexception, java-strings, java-unnecessary, java-unusedcode
+pmd.rulesetfiles=ruleset-java-custom.xml
+pmd.shortFilenames=true
+pmd.formatter.type=html
+pmd.formatter.toFile=${build.dir}/pmd_report.html
+pmd.suppressMarker=NOPMD
+
+

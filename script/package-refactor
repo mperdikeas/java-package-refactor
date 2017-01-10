@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+ME=`basename $0`
+WHERE_I_LIVE=${BASH_SOURCE[0]/%${ME}/.}
+CLASSPATH=\
+:$(echo ${WHERE_I_LIVE}/../dev/dist/*.jar                 | tr ' ' ':')\
+:$(echo ${WHERE_I_LIVE}/../dev/lib-ivy-test/*.jar         | tr ' ' ':')\
+:$(echo ${WHERE_I_LIVE}/../dev/lib-static-test/*.jar      | tr ' ' ':')
+#echo "using CLASSPATH=$CLASSPATH"
+java -classpath "${CLASSPATH}" mjb44.tools.packagerefactor.PackageRefactor $@
+

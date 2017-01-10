@@ -1,0 +1,4 @@
+Use the following incantation for brightly coloured output:
+
+    ant dry-jar | grcat grc.conf
+

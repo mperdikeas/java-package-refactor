@@ -1,0 +1,9 @@
+build/
+build.instrumented/
+build.properties
+build.xml
+dist/
+ivy.xml.control
+lib-ivy-compile/
+lib-ivy-test/
+cobertura.ser

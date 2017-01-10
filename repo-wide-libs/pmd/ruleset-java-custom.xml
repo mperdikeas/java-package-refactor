@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+
+<ruleset name="Basic"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+  <description>
+    Customized PMD rulesets (to escape lunacy)
+  </description>
+
+  <rule ref="rulesets/java/basic.xml">
+    <exclude name="CollapsibleIfStatements"/>
+  </rule>
+  <!--rule ref="rulesets/java/braces.xml"/-->
+  <rule ref="rulesets/java/clone.xml"/>
+  <!--rule ref="rulesets/java/comments.xml"/-->
+  <rule ref="rulesets/java/design.xml">
+    <exclude name="ConfusingTernary"/>
+  </rule>
+  <rule ref="rulesets/java/empty.xml"/>
+  <rule ref="rulesets/java/empty.xml/EmptyCatchBlock">
+    <properties>
+        <property name="allowCommentedBlocks" value="true"/>
+    </properties>
+  </rule>
+
+  <rule ref="rulesets/java/finalizers.xml"/>
+  <rule ref="rulesets/java/imports.xml"/>
+  <!--rule ref="rulesets/java/naming.xml"/-->
+  <!--rule ref="rulesets/java/optimizations.xml"/-->
+  <rule ref="rulesets/java/optimizations.xml">
+    <exclude name="LocalVariableCouldBeFinal"/>
+    <exclude name="MethodArgumentCouldBeFinal"/>
+    <exclude name="AvoidInstantiatingObjectsInLoops"/>
+    <exclude name="SimplifyStartsWith"/>
+  </rule>
+
+  <rule ref="rulesets/java/strictexception.xml/ExceptionAsFlowControl"/>
+  <rule ref="rulesets/java/strictexception.xml/AvoidCatchingNPE"/>
+  <rule ref="rulesets/java/strictexception.xml/AvoidThrowingNullPointerException"/>
+  <rule ref="rulesets/java/strictexception.xml/AvoidRethrowingException"/>
+  <rule ref="rulesets/java/strictexception.xml/DoNotExtendJavaLangError"/>
+  <rule ref="rulesets/java/strictexception.xml/DoNotThrowExceptionInFinally"/>
+  <rule ref="rulesets/java/strictexception.xml/AvoidThrowingNewInstanceOfSameException"/>
+  <rule ref="rulesets/java/strictexception.xml/AvoidLosingExceptionInformation"/>
+
+  <rule ref="rulesets/java/strings.xml"/>
+  <rule ref="rulesets/java/strings.xml/AvoidDuplicateLiterals">
+    <properties>
+        <property name="exceptionList"        value="unchecked,%s\\n,false,%s|%s,PMD.SignatureDeclareThrowsException"/>  
+        <property name="maxDuplicateLiterals" value="5"/>
+        <property name="minimumLength"        value="4"/>
+    </properties>
+  </rule>
+  <rule ref="rulesets/java/typeresolution.xml"/>
+  <rule ref="rulesets/java/unnecessary.xml">
+    <exclude name="UselessParentheses"/>
+  </rule>
+  <rule ref="rulesets/java/unusedcode.xml"/>
+
+
+
+</ruleset>

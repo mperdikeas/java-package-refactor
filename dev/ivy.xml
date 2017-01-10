@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<ivy-module version="2.0" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info organisation="ACME industries" module="component-x" status="integration"/>
+    <configurations>
+        <conf name="compile-time"  description="artifacts for the compile-time classpath"/>
+        <conf name="test-time"     description="artifacts for the test-time classpath (additional to the above)"/>
+    </configurations>
+    <dependencies>
+        <!-- compile-time dependencies -->
+        <dependency org="com.beust"        name="jcommander" rev="1.30" conf="compile-time->master"/>
+        <dependency org="com.google.guava" name="guava"      rev="20.0" conf="compile-time->master"/>
+        <dependency org="junit"            name="junit"      rev="4.12" conf="compile-time->master"/>
+        
+
+        <dependency org="com.beust"        name="jcommander" rev="1.30" conf="test-time->default"/>
+        <dependency org="com.google.guava" name="guava"      rev="20.0" conf="test-time->default"/>
+        <dependency org="junit"            name="junit"      rev="4.12" conf="test-time->default"/>
+        
+    </dependencies>
+</ivy-module>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="project-name" default="build" basedir="."
+    xmlns:ivy="antlib:org.apache.ivy.ant"
+    xmlns:contrib="http://net.sf.antcontrib"
+>
+    <!-- the below taskef for Ivy is not necessary in Ant 1.8 see: http://stackoverflow.com/q/26929133/274677 -->
+    <taskdef uri="antlib:org.apache.ivy.ant" resource="org/apache/ivy/ant/antlib.xml"  classpath="${user.home}/.ant/lib/ivy-2.3.0.jar"/> 
+    <description>
+        project description...
+    </description>
+    <mainclass name="mjb44.tools.packagerefactor.PackageRefactor"/>
+    <dependencies>
+        <compile>
+            <!-- example use: -->
+            <!--dependency name="some-compile-deps-A"   coverage="yes" depTarget="../../../../some/locationA"/-->
+
+        </compile>
+        <test>
+            <!--dependency name="some-test-deps-A"      coverage="yes" depTarget="../../../../yet/another/locationC"/-->
+        </test>
+    </dependencies>
+
+    <build-properties/>
+    <build-properties-default/>
+    <taskdef-ant-contrib/>
+
+
+    <property-lib-static-compile-dir/>
+    <property-lib-static-test-dir/>
+    <property-lib-ivy-compile-dir/>
+    <property-lib-ivy-test-dir/>
+
+    <property-ivy-xml-file/>
+    <property-ivy-xml-control-file/>
+
+    <dependency-dynamic-properties/>    
+
+    <compile-classpath/>
+
+    <test-classpath/>
+
+    <property-cobertura-dir/>
+    <property-instrumented-dir/>
+    <property-coverage-dir/>
+    <property-coverage-xml-dir/>
+    <property-coverage-summaryxml-dir/>
+    <property-coverage-html-dir/>
+    <property-cobertura-data-file/>
+
+    <cobertura-classpath/>
+    <taskdef-cobertura/>
+    <cobertura-auxpath>
+        <!--
+        <jarfile location="../../../../some/random/locationA/dist/foo-v1.0.jar"/>
+        <jarfile location="../../../../some/random/locationB/dist/bar-v1.0.jar"/>
+        -->
+    </cobertura-auxpath>
+    <cobertura-instrumented-classpath/>
+
+    <target-all/>
+
+    <target-test-ivy/>
+
+    <target-resolve/>
+
+    <target-init/>
+
+    <target-dependency-builds/>
+
+    <compile/>
+    <dry-compile/>
+    <instrument/>
+
+    <build/>
+    <jar/>
+    <dry-jar/>
+
+    <clean-except-ivy/>
+    <clean-ivy/>
+    <clean/>
+    <cclean/>
+
+
+    <test/>
+    <docs/>
+    <check/>
+    <check-style/>
+    <dry-check-style/>
+    <findbugs/>
+    <dry-findbugs/>
+    <vspace/>
+    <pmd/>
+    <coverage-report-xml/>
+    <coverage-report-xml-summary/>
+    <coverage-report-html/>
+    <!--coverage/--><!-- TODO: enable that as well (for integration-level coverage)-->
+    <test-coverage/>
+
+    <run-classpath/>
+    <macrodef-run-generic/>
+    <run/>
+    <dry-run/>
+    <run-instrumented-coverage/>
+
+</project>
+
