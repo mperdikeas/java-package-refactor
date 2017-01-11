@@ -7,17 +7,20 @@ import com.google.common.base.Joiner;
 
 public class EventLogger {
 
-    public List<String> events;
+    public List<Event> events;
 
     public EventLogger() {
         this.events = new ArrayList<>();
     }
 
-    public void logBrokenSymlink(String fname) {
-        events.add(String.format("broken symlink skipped: [%s]", fname));
+    public void log(EventType type, String detail) {
+        events.add(new Event(type, detail));
     }
 
     public String report() {
-        return Joiner.on(System.lineSeparator()).join(events);
+        List<String> rv = new ArrayList<>();
+        for (Event event: events)
+            rv.add(event.toString());
+        return Joiner.on(System.lineSeparator()).join(rv);
     }
 }

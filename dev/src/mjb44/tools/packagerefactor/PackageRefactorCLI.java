@@ -18,12 +18,20 @@ public class PackageRefactorCLI {
     @Parameter(names = {"-o", "--origin"}, description="origin directory", required=true, variableArity = false)
     String origin = ".";
 
-    @Parameter(names = {"-d", "--destin"}, description="destination directory", required=true, variableArity = false)
-    String destin = ".";
+    @Parameter(names = {"-x", "--excludes"}, description="directories to exclude from copy", required=false, variableArity = true)
+    public List<String> excludes = new ArrayList<>();
 
-    @Parameter(names = {"-a", "--anchors"}, description="anchors in origin for directory restructuring and (?) content renaming", required=true, variableArity = true)
+    @Parameter(names = {"-a", "--anchors"}, description="anchors in origin for directory restructuring", required=true, variableArity = true)
     public List<String> anchors = new ArrayList<>();
 
+    @Parameter(names = {"-t", "--package-translation"}, description="package translation in the form of: 'some.package'='a.renaming.of.the.aforementioned.package'", required=true, variableArity = true)
+    public List<String> translation = new ArrayList<>();
+
+    @Parameter(names = {"-n", "--translatable-file-names"}, description="file names to translate in the form of: (a) -n foo, (b) -n *.foo, (c) -n foo.* or (d) -n *.* ; if not provided all files are translated", required=false, variableArity = true)
+    public List<String> translatableFilenames = new ArrayList<>();
+    
+    @Parameter(names = {"-d", "--destin"}, description="destination directory", required=true, variableArity = false)
+    String destin = ".";
 
 
     public static String argumentsProblem(PackageRefactorCLI cli) {
@@ -40,11 +48,22 @@ public class PackageRefactorCLI {
         if (destin.toFile().listFiles().length!=0)
             return String.format("Destin [%s] is not empty - cowardly refusing to proceed"
                                  , cli.destin);
-        for (String anchor: cli.anchors) {
-            Path anchorP = origin.resolve(anchor);
-            if (!Files.isDirectory(anchorP))
-                return String.format("Anchor [%s] in origin [%s] is not a directory or does not exist"
-                                     , anchor
+        String anchorsProblem = argumentProblemCheckPathsExist(origin, cli.anchors);
+        if (anchorsProblem!=null)
+            return anchorsProblem;
+        String excludesProblem = argumentProblemCheckPathsExist(origin, cli.excludes);
+        if (excludesProblem!=null)
+            return excludesProblem;
+        
+        return null;
+    }
+
+    private static String argumentProblemCheckPathsExist(Path origin, List<String> paths) {
+        for (String path: paths) {
+            Path pathP = origin.resolve(path);
+            if (!Files.isDirectory(pathP))
+                return String.format("Path [%s] in origin [%s] is not a directory or does not exist"
+                                     , pathP
                                      , origin);
         }
         return null;
