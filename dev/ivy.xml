@@ -9,14 +9,13 @@
     </configurations>
     <dependencies>
         <!-- compile-time dependencies -->
-        <dependency org="com.beust"        name="jcommander" rev="1.30" conf="compile-time->master"/>
-        <dependency org="com.google.guava" name="guava"      rev="20.0" conf="compile-time->master"/>
-        <dependency org="junit"            name="junit"      rev="4.12" conf="compile-time->master"/>
-        
+        <dependency org="com.beust"            name="jcommander" rev="1.30"  conf="compile-time->master"/>
+        <dependency org="com.google.guava"     name="guava"      rev="20.0"  conf="compile-time->master"/>
+        <dependency org="junit"                name="junit"      rev="4.12"  conf="compile-time->master"/>
 
-        <dependency org="com.beust"        name="jcommander" rev="1.30" conf="test-time->default"/>
-        <dependency org="com.google.guava" name="guava"      rev="20.0" conf="test-time->default"/>
-        <dependency org="junit"            name="junit"      rev="4.12" conf="test-time->default"/>
-        
+        <dependency org="com.beust"            name="jcommander" rev="1.30"  conf="test-time->default"/>
+        <dependency org="com.google.guava"     name="guava"      rev="20.0"  conf="test-time->default"/>
+        <dependency org="junit"                name="junit"      rev="4.12"  conf="test-time->default"/>
+        <dependency org="com.google.code.gson" name="gson"       rev="2.2.4" conf="test-time->default"/>        
     </dependencies>
 </ivy-module>

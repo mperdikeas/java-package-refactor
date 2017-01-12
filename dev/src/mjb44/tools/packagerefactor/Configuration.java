@@ -19,35 +19,36 @@ import static mjb44.tools.packagerefactor.Util.join;
 
 public class Configuration {
 
-    public Path       origin;
-    public Set<Path>  excludes;    
-    public Set<Path>  anchors;
-    public Path       destin;
-
+    public Path                            origin;
+    public Set<Path>                       excludes;    
+    public Set<Path>                       anchors;
     public Map<List<String>, List<String>> translation;
-    public Set<String> translatableFilenames;
+    public Set<String>                     translatableFilenames;
+    public Path                            destin;
+
     
-    public Configuration(Path origin, Path destin, List<String> excludes, List<String> anchors, Map<List<String>, List<String>> translation, Set<String> translatableFilenames) {
-        this.origin        = origin;
-        this.destin        = destin;
-        this.excludes       = new LinkedHashSet<>();
-        for (String exclude: excludes)
-            this.excludes.add(origin.resolve(exclude).normalize());
-        this.anchors       = new LinkedHashSet<>();
-        for (String anchor: anchors)
-            this.anchors.add(origin.resolve(anchor).normalize());
-        this.translation = translation;
+    public Configuration(Path                              origin
+                         , Set<Path>                       excludes
+                         , Set<Path>                       anchors
+                         , Map<List<String>, List<String>> translation
+                         , Set<String>                     translatableFilenames
+                         , Path                            destin) {
+        this.origin                = origin;
+        this.excludes              = excludes;
+        this.anchors               = anchors;
+        this.translation           = translation;
         this.translatableFilenames = translatableFilenames;
+        this.destin                = destin;        
     }
 
     protected ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
-            .add("origin", origin)
-            .add("excludes", excludes)
-            .add("anchors", anchors)
-            .add("destin", destin)
-            .add("translation", translation)
+            .add("origin"               , origin)
+            .add("excludes"             , excludes)
+            .add("anchors"              , anchors)
+            .add("translation"          , translation)
             .add("translatableFilenames", translatableFilenames)
+            .add("destin"               , destin)
             ;
     }
     
@@ -58,23 +59,42 @@ public class Configuration {
     
 
 
-    public static Configuration fromCLI(PackageRefactorCLI cli) {
+    public static Configuration fromConfigurationProvider(IConfigurationProvider cp) throws ConfigurationException {
 
-        Path origin = Paths.get(cli.origin).normalize();
-        Path destin = Paths.get(cli.destin).normalize();
-        Map<List<String>, List<String>> translation = translation(cli.translation);
-        Set<String> translatableFilenames = translatableFilenames(cli.translatableFilenames);
-        return new Configuration(origin, destin, cli.excludes, cli.anchors, translation, translatableFilenames); 
+        Path origin = Paths.get(cp.getOrigin()).normalize();
+        Set<Path> excludes = stringsToPaths(cp.getExcludes(), origin, cp.getRelative());
+        Set<Path> anchors  = stringsToPaths(cp.getAnchors() , origin, cp.getRelative());
+        Map<List<String>, List<String>> translation = translation(cp.getTranslation());
+        Set<String> translatableFilenames = translatableFilenames(cp.getTranslatableFilenames());
+        Path destin = Paths.get(cp.getDestin()).normalize();        
+        return new Configuration(origin, excludes, anchors, translation, translatableFilenames, destin);
     }
 
-    private static LinkedHashMap<List<String>, List<String>> translation(List<String> translations) {
+    private static Set<Path> stringsToPaths (List<String> paths, Path origin, boolean relative) throws ConfigurationException {
+        Set<Path> rv = new LinkedHashSet<>();
+        Path p = null;
+        for (String path: paths) {
+            if (relative)
+                p = origin.resolve(path).normalize();
+            else
+                p = Paths.get(path).normalize();
+            if (!rv.add(p))
+                throw new ConfigurationException(String.format("Path [%s] already encountered - please don't use duplicate paths"
+                                                               , path));
+        }
+        return rv;
+    }
+
+    private static LinkedHashMap<List<String>, List<String>> translation(List<String> translations) throws ConfigurationException {
         LinkedHashMap<List<String>, List<String>> rv = new LinkedHashMap<>();
         for (String translation: translations) {
-            String[] fromTo = translation.split("=");
+            String[] fromTo = translation.split("#");
             Assert.assertEquals(2, fromTo.length);
             List<String> from = splitOnDots(fromTo[0]);
             List<String> to   = splitOnDots(fromTo[1]);
-            Assert.assertNull(rv.put(from, to));
+            if (rv.put(from, to)!=null)
+                throw new ConfigurationException(String.format("Duplicate translation rule for [%s] encountered"
+                                                               , join(from)));
         }
         return rv;
     }
@@ -83,7 +103,7 @@ public class Configuration {
         return Arrays.asList(packageName.split("\\."));
     }
 
-    private static Set<String> translatableFilenames(List<String> translatableFilenames) {
+    private static Set<String> translatableFilenames(List<String> translatableFilenames) throws ConfigurationException {
         Set<String> rv = new LinkedHashSet<>();
         for (String translatableFilename: translatableFilenames) {
             String out = translatableFilename;
@@ -94,7 +114,9 @@ public class Configuration {
                 out = out.replaceAll(regexpAndValue.regexp
                                    , regexpAndValue.value);
             }
-            rv.add(out);
+            if (!rv.add(out))
+                throw new ConfigurationException(String.format("translatable filename [%s] has already been provided, please don't use duplicate translatable filenames"
+                                                               , translatableFilename));
         }
         System.out.printf("%s changed into %s\n"
                           , join(translatableFilenames)
