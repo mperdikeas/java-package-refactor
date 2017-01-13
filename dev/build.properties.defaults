@@ -1,5 +1,5 @@
 ### software name & version
-software.name=package-refactor
+software.name=java-package-refactor
 software.version=1.0
 
 ### compiler flags & options

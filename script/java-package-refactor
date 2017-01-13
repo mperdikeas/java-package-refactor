@@ -6,5 +6,5 @@ CLASSPATH=\
 :$(echo ${WHERE_I_LIVE}/../dev/lib-ivy-test/*.jar         | tr ' ' ':')\
 :$(echo ${WHERE_I_LIVE}/../dev/lib-static-test/*.jar      | tr ' ' ':')
 #echo "using CLASSPATH=$CLASSPATH"
-java -classpath "${CLASSPATH}" mjb44.tools.packagerefactor.PackageRefactor $@
+java -classpath "${CLASSPATH}" mjb44.tools.packagerefactor.JavaPackageRefactor $@
 

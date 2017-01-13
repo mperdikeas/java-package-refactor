@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.Arrays;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.Files;
 
 import org.junit.Assert;
 
@@ -19,6 +20,7 @@ import static mjb44.tools.packagerefactor.Util.join;
 
 public class Configuration {
 
+    private IConfigurationProvider         configProvider; // the configuration provider that created this configuration ?
     public Path                            origin;
     public Set<Path>                       excludes;    
     public Set<Path>                       anchors;
@@ -27,12 +29,28 @@ public class Configuration {
     public Path                            destin;
 
     
-    public Configuration(Path                              origin
+    private Configuration(IConfigurationProvider            configProvider
+                         , Path                            origin
                          , Set<Path>                       excludes
                          , Set<Path>                       anchors
                          , Map<List<String>, List<String>> translation
                          , Set<String>                     translatableFilenames
-                         , Path                            destin) {
+                         , Path                            destin) throws ConfigurationException {
+        this.configProvider = configProvider;
+        if (!Files.isDirectory(origin))
+            throw new ConfigurationException(String.format("Origin [%s] does not exist or is not a directory"
+                                                           , origin));
+        for (Path exclude: excludes)
+            if (!Files.isDirectory(exclude))
+                throw new ConfigurationException(String.format("Exclude [%s] does not exist or is not a directory"
+                                                               , exclude));
+        for (Path anchor: anchors)
+            if (!Files.isDirectory(anchor))
+                throw new ConfigurationException(String.format("Anchor [%s] does not exist or is not a directory"
+                                                               , anchor));
+        if (!Files.isDirectory(origin))
+            throw new ConfigurationException(String.format("Destin [%s] does not exist or is not a directory"
+                                                           , destin));
         this.origin                = origin;
         this.excludes              = excludes;
         this.anchors               = anchors;
@@ -56,18 +74,45 @@ public class Configuration {
     public String toString() {
         return toStringHelper().toString();
     }
+
+    public JSONConfiguration relativize() {
+        List<String> excludes = null;
+        List<String> anchors  = null;
+
+        if (!configProvider.isRelative()) {
+            excludes = relativize(origin, configProvider.getExcludes());
+            anchors  = relativize(origin, configProvider.getAnchors ());
+        } else {
+            excludes = configProvider.getExcludes();
+            anchors  = configProvider.getAnchors();
+        }
+        return new JSONConfiguration(excludes
+                                     , anchors
+                                     , configProvider.getTranslation()
+                                     , configProvider.getTranslatableFilenames());
+    }
+
+    private static List<String> relativize(Path origin, List<String> dirs) {
+        List<String> rv = new ArrayList<>();
+        for (String dir : dirs) {
+            Path dirp = Paths.get(dir);
+            Assert.assertTrue(Files.exists(dirp));
+            Assert.assertTrue(dirp.startsWith(origin));
+            rv.add(origin.relativize(Paths.get(dir)).toString());
+        }
+        return rv;
+    }
     
 
 
     public static Configuration fromConfigurationProvider(IConfigurationProvider cp) throws ConfigurationException {
-
         Path origin = Paths.get(cp.getOrigin()).normalize();
-        Set<Path> excludes = stringsToPaths(cp.getExcludes(), origin, cp.getRelative());
-        Set<Path> anchors  = stringsToPaths(cp.getAnchors() , origin, cp.getRelative());
+        Set<Path> excludes = stringsToPaths(cp.getExcludes(), origin, cp.isRelative());
+        Set<Path> anchors  = stringsToPaths(cp.getAnchors() , origin, cp.isRelative());
         Map<List<String>, List<String>> translation = translation(cp.getTranslation());
         Set<String> translatableFilenames = translatableFilenames(cp.getTranslatableFilenames());
         Path destin = Paths.get(cp.getDestin()).normalize();        
-        return new Configuration(origin, excludes, anchors, translation, translatableFilenames, destin);
+        return new Configuration(cp, origin, excludes, anchors, translation, translatableFilenames, destin);
     }
 
     private static Set<Path> stringsToPaths (List<String> paths, Path origin, boolean relative) throws ConfigurationException {
@@ -106,6 +151,12 @@ public class Configuration {
     private static Set<String> translatableFilenames(List<String> translatableFilenames) throws ConfigurationException {
         Set<String> rv = new LinkedHashSet<>();
         for (String translatableFilename: translatableFilenames) {
+            {
+                final String JAVA_EXTENSION = "*.java";
+                if (translatableFilename.equals(JAVA_EXTENSION))
+                    throw new ConfigurationException(String.format("Java files are always translated, you don't have to include '%s' in the -n parameter"
+                                                                   , JAVA_EXTENSION));
+}
             String out = translatableFilename;
             List<RegexpAndValue> regexpAndValues = Arrays.asList(new RegexpAndValue[]{
                     new RegexpAndValue("\\."  , "\\\\."),
@@ -118,9 +169,6 @@ public class Configuration {
                 throw new ConfigurationException(String.format("translatable filename [%s] has already been provided, please don't use duplicate translatable filenames"
                                                                , translatableFilename));
         }
-        System.out.printf("%s changed into %s\n"
-                          , join(translatableFilenames)
-                          , join(rv));
         return rv;
     }
 }

@@ -19,8 +19,26 @@ public class EventLogger {
 
     public String report() {
         List<String> rv = new ArrayList<>();
-        for (Event event: events)
-            rv.add(event.toString());
+        final String REPORT = "REPORT";
+        List<Event> brokenLinks = eventsForType(EventType.BROKEN_SYMLINK);
+        rv.add(String.format("%s#%s %d broken links could not be copied over:"
+                             , REPORT
+                             , EventType.BROKEN_SYMLINK.code.toUpperCase()
+                             , brokenLinks.size()));
+        for (Event brokenLink: brokenLinks)
+            rv.add(String.format("%s#%s %s"
+                                 , REPORT
+                                 , EventType.BROKEN_SYMLINK.code.toUpperCase()
+                                 , brokenLink.detail));
         return Joiner.on(System.lineSeparator()).join(rv);
+    }
+
+    public List<Event> eventsForType(EventType eventType) {
+        List<Event> rv = new ArrayList<>();
+        for (Event event: events) {
+            if (event.type==EventType.BROKEN_SYMLINK)
+                rv.add(event);
+        }
+        return rv;
     }
 }

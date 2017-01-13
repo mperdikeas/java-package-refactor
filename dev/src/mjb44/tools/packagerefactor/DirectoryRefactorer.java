@@ -44,31 +44,19 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
                 Assert.assertNull(String.format("multiple anchor found for [%s]", dir.toString())
                                   , rv);
                 rv = anchor;
-            } else
-                System.out.printf("dir [%s] does not start with [%s]\n", dir, anchor);
+            }
         }
-        System.out.printf("ANCHOR-FOUND: for dir [%s], anchor is: [%s]\n"
-                          , dir
-                          , rv);
         return rv;
     }
 
     private List<String> removeAnchor(Path anchor, List<String> pathParts) {
         Path anchorRelativeToOrigin = this.config.origin.relativize(anchor);
-        System.out.printf("Anchor changed from [%s] to [%s] (path parts are: [%s])\n"
-                          , anchor
-                          , anchorRelativeToOrigin
-                          , pathParts);
         int i = 0;
         for ( ; i < anchorRelativeToOrigin.getNameCount(); i++) {
             if (!anchorRelativeToOrigin.getName(i).toString().equals(pathParts.get(i)))
                 break;
         }
         List<String> rv = pathParts.subList(i, pathParts.size());
-        System.out.printf("ANCHOR-REMOVAL: Anchor broken off at [%d], path from [%s] changed into [%s]\n"
-                          , i
-                          , join(pathParts)
-                          , join(rv));
         return rv;
     }
 
@@ -80,19 +68,12 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
             if (this.config.translation.containsKey(part)) {
                 rv.subList(rv.size()-(part.size()-1), rv.size()).clear();
                 List<String> translatedPart = this.config.translation.get(part);
-                System.out.printf("Successfully partially translated [%s] to [%s]\n"
-                                  , join(part)
-                                  , join(translatedPart));
                 rv.addAll(translatedPart);
                 startOfSearchForNextMatch = i+1;
             } else {
                 rv.add(in.get(i));
             }
         }
-        if (!in.equals(rv))
-            System.out.printf("Full translation of [%s] to [%s]\n"
-                              , join(in)
-                              , join(rv));
         return rv;
     }
 
@@ -103,9 +84,7 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
             // find longest match that starts from i
             int lengthOfMatch = in.size()-i;
             for (; lengthOfMatch >0 ; lengthOfMatch--) {
-                System.out.printf("CHECKING-BEFORE i=[%d]\n", i);
                 List<String> candidatePart = in.subList(i, i+lengthOfMatch);
-                System.out.printf("CHECKING whether part [%s] is in map\n", join(candidatePart));
                 if (this.config.translation.containsKey(candidatePart))
                     break;
             }
@@ -121,17 +100,12 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
                 i+=lengthOfMatch;
             }
         }
-        if (!in.equals(rv))
-            System.out.printf("Full translation of [%s] to [%s]\n"
-                              , join(in)
-                              , join(rv));
         return rv;
     }
     
     @Override
     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
         if (this.config.excludes.contains(dir)) {
-            System.out.printf("EXCLUDES activated for %s\n", dir);
             return FileVisitResult.SKIP_SUBTREE;
         } else
             return FileVisitResult.CONTINUE;
@@ -142,8 +116,6 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
         Path         dirRelativeToOrigin              = this.config.origin.relativize(dir);
         List<Path>   dirRelativeToOriginComponents    = Lists.newArrayList(dirRelativeToOrigin);
         List<String> dirRelativeToOriginComponentsStr = stringify(dirRelativeToOriginComponents);
-        System.out.printf("Reached tree leaf - path components are: [%s]\n"
-                          , join(dirRelativeToOriginComponentsStr));
         copyToTarget(dir, dirRelativeToOriginComponentsStr);
         return FileVisitResult.CONTINUE;
     }
@@ -159,20 +131,13 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
 
     private void copyToTarget(Path dir, List<String> path) {
         try {
-            System.out.printf("copying [%s] to [%s]\n",
-                              join(path),
-                              this.config.destin);
             Path anchor = anchorForDirectory(dir);
             Path dirInOutput = resolve(this.config.destin, path);
             if (anchor != null) {
-                System.out.printf("PACKAGE dir [%s] is in anchors, path is [%s]\n"
-                                  , dir
-                                  , join(path));
                 List<String> outputPath = translateAccordingToMap(removeAnchor(anchor, path));
                 Path anchorRelativeToOrigin = this.config.origin.relativize(anchor);
                 Path anchorInDestination = this.config.destin.resolve(anchorRelativeToOrigin);
                 dirInOutput = resolve(anchorInDestination, outputPath);
-                System.out.printf("DIR-IN-OUTPUT is: %s\n", dirInOutput);
             }
 
             Files.createDirectories( dirInOutput );
@@ -195,13 +160,12 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
     }
 
     private boolean fileIsApplicableForContentTranslation(Path file) {
-        for (String regexp: this.config.translatableFilenames) {
+        Set<String> effectiveTranslatableFilenames = new LinkedHashSet<>(this.config.translatableFilenames);
+        effectiveTranslatableFilenames.add(".*\\.java");
+        for (String regexp: effectiveTranslatableFilenames) {
             Pattern pattern = Pattern.compile(regexp);
             Matcher matcher = pattern.matcher(file.toString());
             if (matcher.matches()) {
-                System.out.printf("REGEXP-FNAME-MATCH: file [%s] matches [%s]\n"
-                                  , file
-                                  , regexp);
                 return true;
             }
         }

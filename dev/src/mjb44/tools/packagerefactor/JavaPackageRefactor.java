@@ -1,6 +1,7 @@
 package mjb44.tools.packagerefactor;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
@@ -8,35 +9,23 @@ import java.nio.charset.StandardCharsets;
 import mutil.cli.CLIUtil;
 import mutil.json.JsonProvider;
 
-public class PackageRefactor {
+public class JavaPackageRefactor {
 
     public static void main (String args[]) throws Exception {
-        PackageRefactorCLI cli = CLIUtil.cli(PackageRefactor.class.getName(), args, PackageRefactorCLI.class);
-        String problem = PackageRefactorCLI.argumentsProblem(cli);
+        JavaPackageRefactorCLI cli = CLIUtil.cli(JavaPackageRefactor.class.getName(), args, JavaPackageRefactorCLI.class);
+        String problem = JavaPackageRefactorCLI.argumentsProblem(cli);
         if (problem!=null) {
             System.out.printf("%s\n", problem);
             System.exit(1);
         }
-        // TODO write hygiene code that attempts to internalize the sample JSON file 
-        if (false)
-        { // transient: obtain a JSON dump
-            ConfigurationJson o = new ConfigurationJson(  cli.excludes
-                                                          , cli.anchors
-                                                          , cli.translation
-                                                          , cli.translatableFilenames);
-            String json = JsonProvider.toJson(o);
-            java.io.PrintWriter pw = new java.io.PrintWriter("dump.json");
-            pw.printf("%s\n", json);
-            pw.flush();
-            pw.close();
-        }
+
         Configuration config = null;
         try {
-            IConfigurationProvider configProvider = null;
-            if (cli.configFilename!=null) {
-                ConfigurationJson configJson = JsonProvider.fromJson(com.google.common.io.Files.toString(Paths.get(cli.configFilename).toFile()
+            IConfigurationProvider configProvider = null;            
+            if (cli.jsonConfigFile != null) {
+                JSONConfiguration configJson = JsonProvider.fromJson(com.google.common.io.Files.toString(Paths.get(cli.jsonConfigFile).toFile()
                                                                                                          , StandardCharsets.UTF_8)
-                                                                     , ConfigurationJson.class);
+                                                                     , JSONConfiguration.class);
                 configProvider = configJson.createConfigurationProvider(cli.origin, cli.destin);
             } else {
                 configProvider = cli;
@@ -44,11 +33,9 @@ public class PackageRefactor {
             config = Configuration.fromConfigurationProvider(configProvider);
         } catch (ConfigurationException e) {
             throw new RuntimeException(String.format("bug - this should have been caught by now in the call to %s.argumentsProblem"
-                                                     , PackageRefactorCLI.class.getName()));
+                                                     , JavaPackageRefactorCLI.class.getName()));
         }
-        System.out.printf("%s#main CONFIG is: %s\n"
-                          , PackageRefactor.class.getName()
-                          , config);
+        dumpConfigurationIfNecessary(cli.dumpJsonConfigFile, cli.dumpJsonConfigFileForce, config);
         doWork(config); // TODO: report statistics at the end and treat verbosity
     }
 
@@ -62,5 +49,17 @@ public class PackageRefactor {
             throw new RuntimeException(e);
         }
         System.out.printf("%s\n", eventLogger.report());
+    }
+
+    private static void dumpConfigurationIfNecessary(String dumpJsonConfigFile, String dumpJsonConfigFileForce, Configuration config) throws FileNotFoundException {
+        if ((dumpJsonConfigFile!=null) || (dumpJsonConfigFileForce!=null)) {
+            String dumpFile = dumpJsonConfigFile!=null?dumpJsonConfigFile:dumpJsonConfigFileForce;
+            JSONConfiguration o = config.relativize();
+            String json = JsonProvider.toJson(o);
+            java.io.PrintWriter pw = new java.io.PrintWriter(dumpFile);
+            pw.printf("%s\n", json);
+            pw.flush();
+            pw.close();
+        }
     }
 }

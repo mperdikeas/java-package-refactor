@@ -10,6 +10,6 @@ public interface IConfigurationProvider {
     List<String> getTranslation           ();
     List<String> getTranslatableFilenames ();
     String       getDestin                ();
-    boolean      getRelative              ();
+    boolean      isRelative               ();
     
 }
