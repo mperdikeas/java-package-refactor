@@ -29,11 +29,16 @@ public class JavaPackageRefactorCLI implements IConfigurationProvider {
     @Override
     public List<String> getExcludes() {return excludes;}    
 
-    @Parameter(names = {"-a", "--anchors"}, description="anchors in origin for directory restructuring", required=false, variableArity = true)
+    @Parameter(names = {"-a", "--anchors"}, description="anchors for Java source code in origin for directory restructuring", required=false, variableArity = true)
     public List<String> anchors = new ArrayList<>();
     @Override
     public List<String> getAnchors() {return anchors;}
 
+   @Parameter(names = {"-e", "--exclusive-classes"}, description="exclusively copy / refactor these classes (fully qualified name for class in the form of a.b.c.AClass or a.b.c.* for package name to include all classes)", required=false, variableArity = true)
+    public List<String> exclusiveClasses = new ArrayList<>();
+    @Override
+    public List<String> getExclusiveClasses() {return exclusiveClasses;}
+    
     @Parameter(names = {"-t", "--package-translation"}, description="package translation in the form of: 'some.package'#'a.renaming.of.the.aforementioned.package'", required=false, variableArity = true)
     public List<String> translation = new ArrayList<>();
     @Override

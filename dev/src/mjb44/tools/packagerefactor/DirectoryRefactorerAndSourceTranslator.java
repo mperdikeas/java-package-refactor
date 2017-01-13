@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,14 +29,28 @@ import com.google.common.collect.Lists;
 import static mjb44.tools.packagerefactor.Util.join;
 
 
-public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements FileVisitor<Path> {
+public class DirectoryRefactorerAndSourceTranslator extends SimpleFileVisitor<Path> implements FileVisitor<Path> {
 
-    private Configuration     config;
-    private EventLogger       eventLogger;
-    
-    public DirectoryRefactorer(Configuration config, EventLogger eventLogger) {
-        this.config       = config;
-        this.eventLogger  = eventLogger;
+    private static final String JAVA_REGEXP = ".*\\.java";
+
+    private Configuration              config;
+    private EventLogger                eventLogger;
+    public  Set<List<String>>          translationsUsed;
+    public  int                        nFilesCopied;
+    public  Map<String, Integer>       nFilesTranslated;
+    public  Map<List<String>, Integer> nFilesFilteredOut;
+    public DirectoryRefactorerAndSourceTranslator(Configuration config, EventLogger eventLogger) {
+        this.config           = config;
+        this.eventLogger      = eventLogger;
+        this.translationsUsed = new LinkedHashSet<>();
+        this.nFilesCopied     = 0;
+        this.nFilesTranslated = new LinkedHashMap<>();
+        this.nFilesTranslated.put(JAVA_REGEXP, 0);
+        for (String regexp: config.translatableFilenames)
+            this.nFilesTranslated.put(regexp, 0);
+        this.nFilesFilteredOut = new LinkedHashMap<>();
+        for (List<String> path: config.exclusiveClasses.keySet())
+            this.nFilesFilteredOut.put(path, 0);
     }
 
     private Path anchorForDirectory(Path dir) {
@@ -60,23 +76,6 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
         return rv;
     }
 
-    private List<String> translateAccordingToMapOld(List<String> in) {
-        List<String> rv = new ArrayList<>();
-        int startOfSearchForNextMatch = 0;
-        for (int i = 0; i < in.size() ; i++) {
-            List<String> part = in.subList(startOfSearchForNextMatch, i+1);
-            if (this.config.translation.containsKey(part)) {
-                rv.subList(rv.size()-(part.size()-1), rv.size()).clear();
-                List<String> translatedPart = this.config.translation.get(part);
-                rv.addAll(translatedPart);
-                startOfSearchForNextMatch = i+1;
-            } else {
-                rv.add(in.get(i));
-            }
-        }
-        return rv;
-    }
-
     private List<String> translateAccordingToMap(List<String> in) {
         List<String> rv = new ArrayList<>();
 
@@ -95,6 +94,7 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
                 // copy over the translated match and increase index by the lengthOfMatch
                 List<String> part = in.subList(i, i+lengthOfMatch);
                 Assert.assertTrue(this.config.translation.containsKey(part));
+                this.translationsUsed.add(part);
                 List<String> translatedPart = this.config.translation.get(part);
                 rv.addAll(translatedPart);
                 i+=lengthOfMatch;
@@ -127,6 +127,15 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
         }
         return rv;
     }
+
+    private boolean packageShouldBeCopiedOver(List<String> path) {
+        Boolean rv = null; 
+        if (this.config.exclusiveClasses.isEmpty())
+            rv = true;
+        else
+            rv = this.config.exclusiveClasses.keySet().contains(path);
+        return rv;
+    }
         
 
     private void copyToTarget(Path dir, List<String> path) {
@@ -134,42 +143,76 @@ public class DirectoryRefactorer extends SimpleFileVisitor<Path> implements File
             Path anchor = anchorForDirectory(dir);
             Path dirInOutput = resolve(this.config.destin, path);
             if (anchor != null) {
-                List<String> outputPath = translateAccordingToMap(removeAnchor(anchor, path));
+                List<String> pathWithAnchorRemoved = removeAnchor(anchor, path);
+                List<String> outputPath = translateAccordingToMap(pathWithAnchorRemoved);
                 Path anchorRelativeToOrigin = this.config.origin.relativize(anchor);
                 Path anchorInDestination = this.config.destin.resolve(anchorRelativeToOrigin);
                 dirInOutput = resolve(anchorInDestination, outputPath);
             }
-
-            Files.createDirectories( dirInOutput );
-            for (File file: dir.toFile().listFiles()) {
-                if (file.isDirectory())
-                    continue;
-                if (!file.exists()) {
-                    Assert.assertTrue(Files.isSymbolicLink(file.toPath()));
-                    this.eventLogger.log(EventType.BROKEN_SYMLINK, file.getPath());
-                    continue;
+            if ((anchor==null) || ((anchor!=null) && packageShouldBeCopiedOver(removeAnchor(anchor, path)))) {
+                Files.createDirectories( dirInOutput );
+                for (File file: dir.toFile().listFiles()) {
+                    if (file.isDirectory())
+                        continue;
+                    if (!file.exists()) {
+                        Assert.assertTrue(Files.isSymbolicLink(file.toPath()));
+                        this.eventLogger.log(EventType.BROKEN_SYMLINK, file.getPath());
+                        continue;
+                    }
+                    boolean fileShouldBeCopiedOver = false;
+                    if ((anchor==null) || (this.config.exclusiveClasses.isEmpty()))
+                        fileShouldBeCopiedOver = true;
+                    else if (!file.getName().toLowerCase().endsWith(".java"))
+                        fileShouldBeCopiedOver = true; // all non-Java files should be copied
+                    else {
+                        List<String> pathWithAnchorRemoved = removeAnchor(anchor, path);                        
+                        ClassesInPackage classesInPackage = this.config.exclusiveClasses.get(pathWithAnchorRemoved);
+                        Assert.assertNotNull(classesInPackage);
+                        if (classesInPackage.all)
+                            fileShouldBeCopiedOver = true;
+                        else {
+                            String fileName        = file.getName();
+                            String simpleClassName = fileName.substring(0, fileName.length()-5);
+                            if (classesInPackage.simpleClassNames.contains(simpleClassName))
+                                fileShouldBeCopiedOver = true;
+                            else {
+                                fileShouldBeCopiedOver = false;
+                                nFilesFilteredOut.put(pathWithAnchorRemoved, nFilesFilteredOut.get(pathWithAnchorRemoved)+1);
+                            }
+                        }
+                    }
+                    if (fileShouldBeCopiedOver) {
+                        Path destinationFile = dirInOutput.resolve(file.getName());
+                        Files.copy(file.toPath(), destinationFile);
+                        nFilesCopied++;
+                        String regexpFound = fileIsApplicableForContentTranslation(file.toPath().getFileName());
+                        if (regexpFound!=null) {
+                            translateFile(destinationFile);
+                            Assert.assertTrue(String.format("Regexp [%s] not found in [%s]"
+                                                            , regexpFound
+                                                            , nFilesTranslated.keySet())
+                                              , nFilesTranslated.containsKey(regexpFound));
+                            nFilesTranslated.put(regexpFound, nFilesTranslated.get(regexpFound)+1);
+                        }
+                    }
                 }
-                Path destinationFile = dirInOutput.resolve(file.getName());
-                Files.copy(file.toPath(), destinationFile);
-                if (fileIsApplicableForContentTranslation(file.toPath().getFileName()))
-                    translateFile(destinationFile);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private boolean fileIsApplicableForContentTranslation(Path file) {
+    private String fileIsApplicableForContentTranslation(Path file) {
         Set<String> effectiveTranslatableFilenames = new LinkedHashSet<>(this.config.translatableFilenames);
-        effectiveTranslatableFilenames.add(".*\\.java");
+        effectiveTranslatableFilenames.add(JAVA_REGEXP);
         for (String regexp: effectiveTranslatableFilenames) {
             Pattern pattern = Pattern.compile(regexp);
             Matcher matcher = pattern.matcher(file.toString());
             if (matcher.matches()) {
-                return true;
+                return regexp;
             }
         }
-        return false;
+        return null;
     }
 
     private void translateFile(Path file) {
