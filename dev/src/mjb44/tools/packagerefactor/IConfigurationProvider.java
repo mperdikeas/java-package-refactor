@@ -12,5 +12,6 @@ public interface IConfigurationProvider {
     List<String> getTranslatableFilenames ();
     String       getDestin                ();
     boolean      isRelative               ();
+    boolean      isQuiet                  ();    
     
 }

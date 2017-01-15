@@ -32,7 +32,7 @@ public class JavaPackageRefactor {
                 JSONConfiguration configJson = JsonProvider.fromJson(com.google.common.io.Files.toString(Paths.get(cli.jsonConfigFile).toFile()
                                                                                                          , StandardCharsets.UTF_8)
                                                                      , JSONConfiguration.class);
-                configProvider = configJson.createConfigurationProvider(cli.origin, cli.destin);
+                configProvider = configJson.createConfigurationProvider(cli.origin, cli.destin, cli.quiet);
             } else {
                 configProvider = cli;
             }
@@ -42,11 +42,12 @@ public class JavaPackageRefactor {
                                                      , JavaPackageRefactorCLI.class.getName()));
         }
         dumpConfigurationIfNecessary(cli.dumpJsonConfigFile, cli.dumpJsonConfigFileForce, config);
-        doWork(config); // TODO: report statistics at the end and treat verbosity
+        boolean unsettlingEventsExist = doWork(config);
+        System.exit(unsettlingEventsExist?2:0);
     }
 
     
-    private static void doWork(Configuration config) {
+    private static boolean doWork(Configuration config) {
         EventLogger eventLogger = new EventLogger();
         try {
             DirectoryRefactorerAndSourceTranslator worker = new DirectoryRefactorerAndSourceTranslator(config, eventLogger);
@@ -60,7 +61,8 @@ public class JavaPackageRefactor {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.printf("%s\n", eventLogger.report());
+        System.out.printf("%s\n", eventLogger.report(config.quiet));
+        return eventLogger.unsettlingEventsExist();
     }
 
     private static void populateEventsForUnusedTranslations(EventLogger eventLogger

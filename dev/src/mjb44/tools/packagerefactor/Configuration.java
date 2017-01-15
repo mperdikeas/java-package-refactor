@@ -8,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.Arrays;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -29,6 +31,7 @@ public class Configuration {
     public Map<List<String>, List<String>>       translation;
     public Set<String>                           translatableFilenames;
     public Path                                  destin;
+    public boolean                               quiet;    
 
 
     private static boolean isPrefixOfSomeExclusivePackage(Map<List<String>, ClassesInPackage> exclusiveClasses
@@ -51,7 +54,8 @@ public class Configuration {
                           , Map<List<String>, ClassesInPackage>   exclusiveClasses
                           , Map<List<String>, List<String>> translation
                           , Set<String>                     translatableFilenames
-                          , Path                            destin) throws ConfigurationException {
+                          , Path                            destin
+                          , boolean                         quiet) throws ConfigurationException {
         this.configProvider = configProvider;
         if (!Files.isDirectory(origin))
             throw new ConfigurationException(String.format("Origin [%s] does not exist or is not a directory"
@@ -67,21 +71,58 @@ public class Configuration {
         this.exclusiveClasses = exclusiveClasses;
         {
             for (List<String> pkgS: this.exclusiveClasses.keySet()) {
-                System.out.printf("examining package or class specification [%s]\n", Util.join(pkgS));
-                Path anchorUnderWhichItIsFound = null;
+                List<Path> pathsToPackage = new ArrayList<>();
                 for (Path anchor: anchors) {
                     String first = pkgS.get(0);
                     List<String> rest = pkgS.subList(1, pkgS.size());
                     Path pkg = Paths.get(first, rest.toArray(new String[rest.size()]));
-                    if (Files.isDirectory(anchor.resolve(pkg))) {
-                        anchorUnderWhichItIsFound = anchor;
+                    Path pathToPackageTest = anchor.resolve(pkg);
+                    if (Files.isDirectory(pathToPackageTest)) {
+                        pathsToPackage.add(pathToPackageTest);
                         break;
                     }
                 }
-                if (anchorUnderWhichItIsFound == null)
-                    throw new ConfigurationException(String.format("Package [%s] does not exist under any of the following anchors: [%s]"
+                if (pathsToPackage.isEmpty())
+                    throw new ConfigurationException(String.format("Package or class [%s] does not exist under any of the following anchors: [%s]"
                                                                    , Util.join(pkgS)
-                                                                   , Util.join(Util.stringify(anchors))));             
+                                                                   , Util.join(Util.stringify(anchors))));
+                else {
+                    ClassesInPackage classesInPackage = this.exclusiveClasses.get(pkgS);
+                    if (classesInPackage.all) {
+                        boolean atLeastOneJavaFileExists = false;
+                        for (Path pathToPackage: pathsToPackage) {
+                            File[] javaFiles = pathToPackage.toFile().listFiles(new FilenameFilter(){
+                                    @Override
+                                    public boolean accept(File dir, String name) {
+                                        return name.toLowerCase().endsWith(".java");
+                                    }
+                                });
+                            if (javaFiles.length>0) {
+                                atLeastOneJavaFileExists = true;
+                                break;
+                            }
+                            if (!atLeastOneJavaFileExists)
+                                throw new ConfigurationException(String.format("Check your [-e] arguments - not a single Java file is found under any of the following packages: {%s}"
+                                                                               , Util.stringify(pathsToPackage)));
+                        }
+                    } else {
+                        List<String> simpleClassnamesNotFound = new ArrayList<>(classesInPackage.simpleClassNames);
+                        for (Path pathToPackage: pathsToPackage) {
+                            // check that at least one (1) Java file exists
+                            List<String> simpleClassNames = classesInPackage.simpleClassNames;
+                            for (String simpleClassName: simpleClassNames) {
+                                String simpleClassNameFilename = String.format("%s.java" , simpleClassName);
+                                Path classFile = pathToPackage.resolve(simpleClassNameFilename);
+                                if (Files.isRegularFile(classFile))
+                                    simpleClassnamesNotFound.remove(simpleClassName);
+                            }
+                        }
+                        if (!simpleClassnamesNotFound.isEmpty())
+                            throw new ConfigurationException(String.format("The following classes [%s] do not exist in any of the candidate package paths: {%s}"
+                                                                           , Util.join(simpleClassnamesNotFound)
+                                                                           , Util.stringify(pathsToPackage)));
+                    }
+                }
             }
         }
         if (!this.exclusiveClasses.isEmpty()) {
@@ -104,7 +145,8 @@ public class Configuration {
         this.anchors               = anchors;
         this.translation           = translation;
         this.translatableFilenames = translatableFilenames;
-        this.destin                = destin;        
+        this.destin                = destin;
+        this.quiet                 = quiet;
     }
 
     protected ToStringHelper toStringHelper() {
@@ -136,6 +178,7 @@ public class Configuration {
         }
         return new JSONConfiguration(excludes
                                      , anchors
+                                     , configProvider.getExclusiveClasses()
                                      , configProvider.getTranslation()
                                      , configProvider.getTranslatableFilenames());
     }
@@ -161,7 +204,7 @@ public class Configuration {
         Map<List<String>, List<String>>      translation = translation(cp.getTranslation());
         Set<String>                          translatableFilenames = translatableFilenames(cp.getTranslatableFilenames());
         Path                                 destin = Paths.get(cp.getDestin()).normalize();        
-        return new Configuration(cp, origin, excludes, anchors, exclusiveClasses, translation, translatableFilenames, destin);
+        return new Configuration(cp, origin, excludes, anchors, exclusiveClasses, translation, translatableFilenames, destin, cp.isQuiet());
     }
 
     private static Set<Path> stringsToPaths (List<String> paths, Path origin, boolean relative) throws ConfigurationException {
@@ -205,13 +248,18 @@ public class Configuration {
                     simpleClassNames.add(simpleClassName);
                     rv.put(packageCompos, ClassesInPackage.some(simpleClassNames));
                 } else {
-                    List<String> simpleClassNames = rv.get(packageCompos).simpleClassNames;
+                    ClassesInPackage classesInPackage = rv.get(packageCompos);
+                    if (classesInPackage.all)
+                        throw new ConfigurationException(String.format("Conflicting -e arguments: You can't have both [all] and some enumerated class names (%s) for package [%s]"
+                                                                       , simpleClassName
+                                                                       , Util.join(packageCompos)));
+                    List<String> simpleClassNames = classesInPackage.simpleClassNames;
                     if (simpleClassNames.contains(simpleClassName))
                         throw new ConfigurationException(String.format("Duplicate class encountered in the -e arguments: [%s]"
                                                                        , exclusiveClassS));
                     simpleClassNames.add(simpleClassName);
                 }
-            } I am left here to ensure that reading the arguments from the command line works
+            }
         }
         if (false) {
         {
@@ -234,7 +282,6 @@ public class Configuration {
 
         }
         }
-        System.out.printf("Returning : [%s]\n", rv);
         return rv;
     }
 

@@ -67,7 +67,12 @@ public class JavaPackageRefactorCLI implements IConfigurationProvider {
 
     @Parameter(names = {"-djf", "--dump-json-file-force"}, description="dump a JSON file capturing the configurations applicable for this run (overwrite existing JSON file if exists)", required=false, variableArity = false)  
     String dumpJsonConfigFileForce;
-    
+
+    @Parameter(names = {"-q", "--quiet"}, description="only print unsettling messages")
+    boolean quiet = false;
+    @Override
+    public boolean isQuiet() {return quiet;}
+
 
     public static String argumentsProblem(JavaPackageRefactorCLI cli) {
         if ((cli.jsonConfigFile!=null) &&
@@ -117,7 +122,8 @@ public class JavaPackageRefactorCLI implements IConfigurationProvider {
                                                                                                              , StandardCharsets.UTF_8)
                                                                          , JSONConfiguration.class);
                     IConfigurationProvider configProvider = configJson.createConfigurationProvider(config.getOrigin()
-                                                                                                   , config.getDestin());
+                                                                                                   , config.getDestin()
+                                                                                                   , config.isQuiet());
                     String problemInRecursiveCall = argumentsProblemConfigCore(configProvider, (String) null);
                     if (problemInRecursiveCall!=null)
                         return problemInRecursiveCall;
