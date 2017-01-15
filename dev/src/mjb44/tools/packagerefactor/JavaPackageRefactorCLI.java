@@ -39,7 +39,7 @@ public class JavaPackageRefactorCLI implements IConfigurationProvider {
     @Override
     public List<String> getExclusiveClasses() {return exclusiveClasses;}
     
-    @Parameter(names = {"-t", "--package-translation"}, description="package translation in the form of: 'some.package'#'a.renaming.of.the.aforementioned.package'", required=false, variableArity = true)
+    @Parameter(names = {"-t", "--package-translation"}, description="package translation in the form of: 'some.package#a.renaming.of.the.aforementioned.package'", required=false, variableArity = true)
     public List<String> translation = new ArrayList<>();
     @Override
     public List<String> getTranslation() {return translation;}
@@ -59,7 +59,7 @@ public class JavaPackageRefactorCLI implements IConfigurationProvider {
     @Override
     public boolean isRelative() {return relative;}
 
-    @Parameter(names = {"-c", "--config-file"}, description="configuration file in JSON format to use for options (except for -o, -d and -r", required=false, variableArity = false)
+    @Parameter(names = {"-c", "--config-file"}, description="configuration file in JSON format to use for options (except for -o, -d and -r)", required=false, variableArity = false)
     String jsonConfigFile;
 
     @Parameter(names = {"-dj", "--dump-json-file"}, description="dump a JSON file capturing the configurations applicable for this run", required=false, variableArity = false)
